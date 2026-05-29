@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cookie Security Analyzer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #181c27;
+      --surface2: #1e2336;
+      --border: rgba(255,255,255,0.08);
+      --text: #e8eaf0;
+      --muted: #7a8098;
+      --accent: #4f8ef7;
+
+      --red: #e24b4a;
+      --red-dim: rgba(226,75,74,0.15);
+      --amber: #ef9f27;
+      --amber-dim: rgba(239,159,39,0.15);
+      --blue: #378add;
+      --blue-dim: rgba(55,138,221,0.15);
+      --green: #1d9e75;
+      --green-dim: rgba(29,158,117,0.15);
+      --purple: #a855f7;
+      --purple-dim: rgba(168,85,247,0.15);
+    }
+
+    body {
+      width: 400px;
+      min-height: 540px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 13px;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #4f8ef7, #a855f7);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    .header-text p {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 28px; height: 28px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+    }
+    .icon-btn:hover { background: var(--surface); color: var(--text); }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 12px;
+      gap: 0;
+      overflow-x: auto;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ── Tab Content ── */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Gauge Section ── */
+    .gauge-section {
+      padding: 20px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .gauge-wrap {
+      position: relative;
+      width: 160px;
+      height: 90px;
+      margin-bottom: 8px;
+    }
+
+    .gauge-wrap canvas {
+      width: 160px;
+      height: 90px;
+    }
+
+    .gauge-label {
+      position: absolute;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+
+    .gauge-score {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .gauge-sub {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .risk-badge.critical { background: var(--red-dim); color: var(--red); }
+    .risk-badge.high     { background: var(--amber-dim); color: var(--amber); }
+    .risk-badge.medium   { background: var(--blue-dim); color: var(--blue); }
+    .risk-badge.low      { background: var(--green-dim); color: var(--green); }
+
+    /* ── Score breakdown pills under gauge ── */
+    .score-breakdown {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .breakdown-pill {
+      font-size: 10px;
+      padding: 3px 9px;
+      border-radius: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .breakdown-pill span { color: var(--text); font-weight: 600; }
+
+    /* ── Stats Row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 0 16px 14px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px;
+      line-height: 1.3;
+    }
+
+    /* ── Flags List ── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 16px 6px;
+    }
+
+    .flag-list {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 14px;
+    }
+
+    .flag-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .flag-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .flag-dot.critical { background: var(--red); }
+    .flag-dot.high     { background: var(--amber); }
+    .flag-dot.medium   { background: var(--blue); }
+    .flag-dot.low      { background: var(--green); }
+
+    .flag-text { flex: 1; color: var(--text); }
+    .flag-meta { font-size: 10px; color: var(--muted); }
+
+    /* ── Attack Patterns (Overview) ── */
+    .pattern-list {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 14px;
+    }
+
+    .pattern-item {
+      padding: 9px 11px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: 0 8px 8px 0;
+      cursor: default;
+    }
+    .pattern-item.critical { border-left-color: var(--red); }
+    .pattern-item.high     { border-left-color: var(--amber); }
+    .pattern-item.medium   { border-left-color: var(--blue); }
+
+    .pattern-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pattern-detail {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+    .pattern-attack-tag {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .pattern-attack-tag.critical { background: var(--red-dim); color: var(--red); }
+    .pattern-attack-tag.high     { background: var(--amber-dim); color: var(--amber); }
+    .pattern-attack-tag.medium   { background: var(--blue-dim); color: var(--blue); }
+
+    /* ── Cookie Table ── */
+    .cookie-list {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .cookie-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .cookie-row:hover { background: var(--surface2); }
+
+    .cookie-row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .cookie-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: 'Consolas', 'Courier New', monospace;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cookie-score-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      flex-shrink: 0;
+    }
+    .cookie-score-pill.critical { background: var(--red-dim); color: var(--red); }
+    .cookie-score-pill.high     { background: var(--amber-dim); color: var(--amber); }
+    .cookie-score-pill.medium   { background: var(--blue-dim); color: var(--blue); }
+    .cookie-score-pill.low      { background: var(--green-dim); color: var(--green); }
+
+    .cookie-flags {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .cookie-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .tag {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .tag.ok      { background: var(--green-dim); color: var(--green); }
+    .tag.bad     { background: var(--red-dim); color: var(--red); }
+    .tag.tracker { background: var(--purple-dim); color: var(--purple); }
+
+    /* ── Headers Tab ── */
+    .header-list {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .header-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .header-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .header-name {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Consolas', 'Courier New', monospace;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .header-status-pill {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+    .header-status-pill.ok      { background: var(--green-dim); color: var(--green); }
+    .header-status-pill.weak    { background: var(--amber-dim); color: var(--amber); }
+    .header-status-pill.missing { background: var(--red-dim); color: var(--red); }
+
+    .header-attack-tag {
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-detail {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 5px;
+      line-height: 1.4;
+    }
+
+    .header-recommendation {
+      font-size: 10px;
+      color: var(--accent);
+      margin-top: 5px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      background: rgba(79,142,247,0.07);
+      padding: 4px 8px;
+      border-radius: 5px;
+      line-height: 1.4;
+    }
+
+    .header-score-bar {
+      height: 3px;
+      border-radius: 2px;
+      margin-top: 8px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    .header-score-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    /* ── Alerts Tab ── */
+    .alert-list {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .alert-item {
+      background: var(--surface);
+      border-left: 3px solid var(--border);
+      border-radius: 0 8px 8px 0;
+      padding: 8px 10px;
+      border-top: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .alert-item.critical { border-left-color: var(--red); }
+    .alert-item.high     { border-left-color: var(--amber); }
+    .alert-item.medium   { border-left-color: var(--blue); }
+
+    .alert-type {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .alert-msg { font-size: 12px; color: var(--text); margin-top: 2px; line-height: 1.4; }
+    .alert-time { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+    /* ── Alert filter tabs ── */
+    .filter-row {
+      display: flex;
+      gap: 5px;
+      padding: 8px 16px 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+    }
+    .filter-btn:hover { background: var(--surface); color: var(--text); }
+    .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Empty state ── */
+    .empty {
+      padding: 30px 16px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 28px; margin-bottom: 8px; }
+    .empty p { font-size: 12px; line-height: 1.5; }
+
+    /* ── Export btn ── */
+    .export-btn {
+      display: block;
+      width: calc(100% - 32px);
+      margin: 0 16px 16px;
+      padding: 9px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+    }
+    .export-btn:hover { background: var(--surface); }
+
+    .domain-label {
+      padding: 8px 16px 4px;
+      font-size: 11px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 16px 12px;
+    }
+
+    .header-summary-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px 10px;
+    }
+    .header-summary-score {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .header-summary-score span {
+      font-weight: 700;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">🛡</div>
+    <div class="header-text">
+      <h1>Cookie Security Analyzer</h1>
+      <p id="current-domain">Loading...</p>
+    </div>
+    <div class="header-actions">
+      <div class="icon-btn" id="refresh-btn" title="Refresh analysis">↻</div>
+      <div class="icon-btn" id="clear-btn" title="Clear history">✕</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="overview">Overview</div>
+    <div class="tab" data-tab="cookies">Cookies</div>
+    <div class="tab" data-tab="headers">Headers</div>
+    <div class="tab" data-tab="alerts">Alerts</div>
+  </div>
+
+  <!-- ── OVERVIEW TAB ── -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="gauge-section">
+      <div class="gauge-wrap">
+        <canvas id="gauge-canvas" width="320" height="180"></canvas>
+        <div class="gauge-label">
+          <div class="gauge-score" id="gauge-score">—</div>
+          <div class="gauge-sub">Threat Score</div>
+        </div>
+      </div>
+      <div class="risk-badge" id="risk-badge">Analyzing...</div>
+      <div class="score-breakdown">
+        <div class="breakdown-pill">Cookies: <span id="breakdown-cookies">—</span></div>
+        <div class="breakdown-pill">Headers: <span id="breakdown-headers">—</span></div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-total">—</div>
+        <div class="stat-label">Total Cookies</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-risky" style="color:var(--amber)">—</div>
+        <div class="stat-label">Risky Cookies</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-trackers" style="color:var(--purple)">—</div>
+        <div class="stat-label">Trackers Found</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Attack Patterns -->
+    <div id="patterns-section" style="display:none">
+      <div class="section-label">⚠ Detected Attack Patterns</div>
+      <div class="pattern-list" id="pattern-list"></div>
+      <div class="divider"></div>
+    </div>
+
+    <div class="section-label">Cookie Risk Flags</div>
+    <div class="flag-list" id="flag-list">
+      <div class="empty"><div class="empty-icon">✓</div><p>No risks detected on this site.</p></div>
+    </div>
+  </div>
+
+  <!-- ── COOKIES TAB ── -->
+  <div class="tab-content" id="tab-cookies">
+    <div class="domain-label" id="cookie-domain-label"></div>
+    <div class="cookie-list" id="cookie-list">
+      <div class="empty"><p>No cookie data loaded yet.</p></div>
+    </div>
+  </div>
+
+  <!-- ── HEADERS TAB ── -->
+  <div class="tab-content" id="tab-headers">
+    <div class="header-summary-bar">
+      <div class="header-summary-score">Header Risk Score: <span id="header-score-val">—</span>/100</div>
+      <div class="risk-badge" id="header-risk-badge" style="margin-top:0; font-size:10px; padding:3px 9px">—</div>
+    </div>
+    <div class="header-list" id="header-list">
+      <div class="empty"><p>Navigate to a page to inspect its security headers.</p></div>
+    </div>
+  </div>
+
+  <!-- ── ALERTS TAB ── -->
+  <div class="tab-content" id="tab-alerts">
+    <div style="padding: 10px 16px 4px; display:flex; justify-content:space-between; align-items:center;">
+      <div class="section-label" style="padding:0">Security Events</div>
+      <span id="alert-count" style="font-size:10px; color:var(--muted)"></span>
+    </div>
+
+    <div class="filter-row">
+      <div class="filter-btn active" data-filter="all">All</div>
+      <div class="filter-btn" data-filter="ATTACK_PATTERN">Patterns</div>
+      <div class="filter-btn" data-filter="HEADER_RISK">Headers</div>
+      <div class="filter-btn" data-filter="COOKIE_RISK">Cookies</div>
+      <div class="filter-btn" data-filter="SESSION_MUTATION">Sessions</div>
+      <div class="filter-btn" data-filter="MIXED_CONTENT">Mixed</div>
+    </div>
+
+    <div class="alert-list" id="alert-list">
+      <div class="empty"><div class="empty-icon">🔕</div><p>No security events recorded yet.</p></div>
+    </div>
+    <button class="export-btn" id="export-btn">⬇ Export Report as JSON</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
