@@ -11,6 +11,9 @@ The extension helps identify vulnerabilities that could lead to:
 - Tracking and Privacy Risks
 - Security Header Misconfigurations
 
+- <img width="499" height="669" alt="image" src="https://github.com/user-attachments/assets/3c0fdb26-aefe-447e-b362-d7edf8c6b249" />
+
+
 ---
 
 ## Features
@@ -27,6 +30,9 @@ The extension evaluates cookies using security best practices:
 - Tracker cookie identification
 
 Each cookie receives a risk score and severity level.
+
+<img width="486" height="670" alt="image" src="https://github.com/user-attachments/assets/a046f3ad-2656-4505-90c7-b6838f539558" />
+
 
 ---
 
@@ -54,6 +60,9 @@ The extension inspects response headers and evaluates:
 - Permissions-Policy
 
 Missing or weak headers increase the overall security risk score.
+
+<img width="493" height="749" alt="image" src="https://github.com/user-attachments/assets/4e9d70d7-5982-4748-a695-2d53e32c1743" />
+
 
 ---
 
